@@ -1,24 +1,32 @@
 #include "StateMachine.h"
 
-#define SIZEOF_TRANSITION_ARRAY (sizeof(uint)*MAX_NUM_TRANSITIONS)
+#define SIZEOF_TRANSITION_ARRAY     (sizeof(uint)*MAX_NUM_TRANSITIONS)
+#define ROUND(value)    (  (((double)((int)((value*100)+.5)))/100) )
 
 statemachine_t StateMachine__BuildURI1824StateMachine(dictionary_t dictionary)
 {
+    #define SIZEOF_DICT_ARRAY  (dictionary.num_of_words*sizeof(uint))
+    
+    uint clicks_pressed = dictionary.num_of_words;
+
     //Initializing state machine with only initial state
     statemachine_t state_machine;
     state_machine.num_of_states = 1;
     state_machine.transition_table = (uint **) malloc(sizeof(uint *));
     state_machine.transition_table[0] = (uint *) malloc(SIZEOF_TRANSITION_ARRAY);
     memset(state_machine.transition_table[0],NO_TRANSITION,SIZEOF_TRANSITION_ARRAY);
-    
-    uint * words_per_state = (uint *) malloc(sizeof(uint));
-    words_per_state[0] = dictionary.num_of_words;
 
-    //Each word is started at state 0 (initial state)
-    uint * words_state = (uint *) malloc(sizeof(uint)*(dictionary.num_of_words));
-    memset(words_state,INITIAL_STATE,dictionary.num_of_words*sizeof(uint));
+    //Array to keep track of currentt state of each word
+    uint * words_state = (uint *) malloc(SIZEOF_DICT_ARRAY);
+    memset(words_state,INITIAL_STATE,SIZEOF_DICT_ARRAY);
+    //Array to keep track of the past state of the word, thus facilitating to calculate the amount of keyspressed
+    uint * words_previous_state = (uint *) malloc(SIZEOF_DICT_ARRAY);
+    memcpy(words_previous_state,words_state,SIZEOF_DICT_ARRAY);
 
-    bool * states_is_final;
+    //List to count the number of words per state,thus facilitating the decision to consider a word as completed
+    uint * num_words_per_state = (uint *) malloc(sizeof(uint));
+    num_words_per_state[0] = dictionary.num_of_words;
+
     //For each possible char id allowed by word
     for(uint char_id = 0; char_id < MAX_NUM_CHARS; char_id++)
     {
@@ -48,7 +56,10 @@ statemachine_t StateMachine__BuildURI1824StateMachine(dictionary_t dictionary)
                         if(i == (state_machine.num_of_states - 1)) 
                             memset(new_transition_table[i], NO_TRANSITION, SIZEOF_TRANSITION_ARRAY);
                         else
+                        {
                             memcpy(new_transition_table[i],state_machine.transition_table[i],SIZEOF_TRANSITION_ARRAY);
+                            free(state_machine.transition_table[i]);
+                        }
                     }
                     free(state_machine.transition_table);
                     state_machine.transition_table = new_transition_table;
@@ -56,18 +67,18 @@ statemachine_t StateMachine__BuildURI1824StateMachine(dictionary_t dictionary)
 
                     //Recreate the list of number of words per state
                     uint * new_words_per_state = (uint *) malloc(state_machine.num_of_states*sizeof(uint));
-                    memcpy(new_words_per_state,words_per_state,(state_machine.num_of_states-1)*sizeof(uint));
+                    memcpy(new_words_per_state,num_words_per_state,(state_machine.num_of_states-1)*sizeof(uint));
                     new_words_per_state[state_machine.num_of_states-1] = 0;
-                    words_per_state = new_words_per_state;
+                    num_words_per_state = new_words_per_state;
                 }
 
                 //Update the current state of the word
                 words_state[word_id] = current_state_transitions[transition_id];
-                words_per_state[words_state[word_id]]++;
+                num_words_per_state[words_state[word_id]]++;
 
                 if(transition_id == END_TRANSITION)
                 {
-                    current_state = FINAL_STATE;
+                    words_state[word_id] = FINAL_STATE;
                 }
             }
         }
@@ -77,27 +88,48 @@ statemachine_t StateMachine__BuildURI1824StateMachine(dictionary_t dictionary)
         {
             if(words_state[word_id] != FINAL_STATE)
             {
-                if(words_per_state[words_state[word_id]] <= 1)
+                if(num_words_per_state[words_state[word_id]] <= 1)
                 {
                     words_state[word_id] = FINAL_STATE;
                     completed_words++;
                 }
             }
             else
-            {
                 completed_words++;
+
+            //If the number of words from the previous state is different then the current state that the word is 
+            //that implies that some of the words made other transition, thus a key was necessary
+            uint current_state_num_words = num_words_per_state[words_state[word_id]];
+            uint previous_state_num_words = num_words_per_state[words_previous_state[word_id]];
+            if(current_state_num_words != previous_state_num_words)
+            {
+                char word_char = dictionary.list_of_words[word_id][char_id];
+                //Do not count a key press if it's the first state or if the word has ended
+                if(words_previous_state[word_id] != INITIAL_STATE && word_char != '\0')
+                    clicks_pressed++;
             }
+
         }
 
         //If every word is completed then finish state machine creation
         if(completed_words == dictionary.num_of_words)
-        {
             break;
-        }
+
+        memcpy(words_previous_state,words_state,SIZEOF_DICT_ARRAY);
     }
 
-    free(words_state);
 
+    // for(int i = 0; i < state_machine.num_of_states; i++)
+    //     free(state_machine.transition_table[i]);
+    free(state_machine.transition_table);
+    free(words_state);
+    free(words_previous_state);
+    free(num_words_per_state);
+    free(num_words_per_state);
+
+
+    double average =  (double)(clicks_pressed)/dictionary.num_of_words;
+    average = ROUND(average);
     return(state_machine);
 }
 

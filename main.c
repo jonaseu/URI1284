@@ -7,9 +7,12 @@ int main(int argc, char const *argv[])
     //GET USER INPUT ========================================================================
     dictionary_t test_dictionary;
 
-    // char * input_words[4] ={"hello","hell","heaven","go"};
-    #define TEST_SIZE  7
-    char * input_words[TEST_SIZE] ={"structure","structures","ride","riders","stress","solstice","ridiculous"};
+    // #define TEST_SIZE  4
+    // char * input_words[TEST_SIZE] ={"hello","hell","heaven","go"};
+    // #define TEST_SIZE  7
+    // char * input_words[TEST_SIZE] ={"structure","structures","ride","riders","stress","solstice","ridiculous"};
+    #define TEST_SIZE  3
+    char * input_words[TEST_SIZE] ={"he","h","hi"};
     test_dictionary.num_of_words = TEST_SIZE;
     test_dictionary.list_of_words = (char **) &input_words;
 

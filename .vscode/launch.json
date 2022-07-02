@@ -5,7 +5,7 @@
         "name": "Build and Debug",
         "type": "cppdbg",
         "request": "launch",
-        "program": "${fileDirname}\\${fileBasenameNoExtension}.exe",
+        "program": "${fileDirname}\\main.exe",
         "args": [],
         "stopAtEntry": false,
         "cwd": "${workspaceFolder}",

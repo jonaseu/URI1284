@@ -9,7 +9,7 @@
                 "-g",
                 "*.c",
                 "-o",
-                "${fileDirname}\\${fileBasenameNoExtension}.exe"
+                "${fileDirname}\\main.exe"
             ],
             "options": {
                 "cwd": "${fileDirname}"
@@ -18,29 +18,6 @@
                 "$gcc"
             ],
             "group": "build",
-            "detail": "Tarefa gerada pelo Depurador."
-        },
-        {
-            "type": "cppbuild",
-            "label": "C/C++: gcc.exe arquivo de build ativo",
-            "command": "C:\\MinGW\\bin\\gcc.exe",
-            "args": [
-                "-fdiagnostics-color=always",
-                "-g",
-                "${file}",
-                "-o",
-                "${fileDirname}\\${fileBasenameNoExtension}.exe"
-            ],
-            "options": {
-                "cwd": "${fileDirname}"
-            },
-            "problemMatcher": [
-                "$gcc"
-            ],
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
             "detail": "Tarefa gerada pelo Depurador."
         }
     ],
