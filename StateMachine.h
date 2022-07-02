@@ -24,6 +24,6 @@ typedef struct
 
 
 statemachine_t StateMachine__BuildURI1824StateMachine(dictionary_t dictionary);
-
+bool StateMachine__URI1824StateMachineToCSV(statemachine_t statemachine, char * filename);
 
 #endif // STATEMACHINE_H_

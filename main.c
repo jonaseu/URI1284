@@ -16,7 +16,7 @@ int main(int argc, char const *argv[])
         };
     test_dictionary.list_of_words = (char **) &input_words;
 
-    StateMachine__BuildURI1824StateMachine(test_dictionary);
+    StateMachine__URI1824StateMachineToCSV(StateMachine__BuildURI1824StateMachine(test_dictionary), "statemachine.csv");
     return 0;
 
 
