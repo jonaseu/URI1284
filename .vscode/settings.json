@@ -1,3 +1,8 @@
 {
-    "code-runner.runInTerminal": false
+    "code-runner.runInTerminal": true,
+    "files.associations": {
+        "stdio.h": "c",
+        "uri1824_defs.h": "c",
+        "statemachine.h": "c"
+    }
 }
