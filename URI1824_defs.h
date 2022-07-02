@@ -11,4 +11,6 @@
 
 #define NUM_CHARS_ALLOWED   (26)    //'a' to 'z', only lowercase
 
+#define SIZEOF_WORDS (sizeof(char)*MAX_WORD_LENGTH)
+
 typedef unsigned int uint;

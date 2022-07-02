@@ -11,11 +11,11 @@ statemachine_t StateMachine__BuildURI1824StateMachine(dictionary_t dictionary)
     state_machine.transition_table[0] = (uint *) malloc(SIZEOF_TRANSITION_ARRAY);
     memset(state_machine.transition_table[0],NO_TRANSITION,SIZEOF_TRANSITION_ARRAY);
     
-    uint * words_per_state = malloc(sizeof(uint));
+    uint * words_per_state = (uint *) malloc(sizeof(uint));
     words_per_state[0] = dictionary.num_of_words;
 
     //Each word is started at state 0 (initial state)
-    uint * words_state = malloc(sizeof(uint)*(dictionary.num_of_words));
+    uint * words_state = (uint *) malloc(sizeof(uint)*(dictionary.num_of_words));
     memset(words_state,INITIAL_STATE,dictionary.num_of_words*sizeof(uint));
 
     bool * states_is_final;
@@ -55,7 +55,7 @@ statemachine_t StateMachine__BuildURI1824StateMachine(dictionary_t dictionary)
                     current_state_transitions = (uint *) state_machine.transition_table[current_state];
 
                     //Recreate the list of number of words per state
-                    uint * new_words_per_state = malloc(state_machine.num_of_states*sizeof(uint));
+                    uint * new_words_per_state = (uint *) malloc(state_machine.num_of_states*sizeof(uint));
                     memcpy(new_words_per_state,words_per_state,(state_machine.num_of_states-1)*sizeof(uint));
                     new_words_per_state[state_machine.num_of_states-1] = 0;
                     words_per_state = new_words_per_state;
@@ -108,19 +108,39 @@ bool StateMachine__URI1824StateMachineToCSV(statemachine_t statemachine, char * 
     fp = fopen (filename, "w+");
 
     //Write headers
-    fprintf(fp, "%s","State");
+    fprintf(fp, "%s","State Name");
+    fprintf(fp, ",%s","State");
     for(uint transition = 0; transition < MAX_NUM_TRANSITIONS;transition++)
     {
-        fprintf(fp, ",%c",('a'+transition));
+        char transition_char = (transition == (MAX_NUM_TRANSITIONS -1)) ? '*' : 'a'+transition;
+        fprintf(fp, ",%c",transition_char);
+    }
+
+    //Initialize the names of each state to be printed
+    char ** state_names = (char **) malloc(statemachine.num_of_states*sizeof(char *));
+    for(int i = 0; i < statemachine.num_of_states; i++)
+    {
+        state_names[i] = (char *) malloc(SIZEOF_WORDS);
+        memset(state_names[i],'\0',SIZEOF_WORDS);
     }
 
     //Write state machine
     for(uint state = 0; state < statemachine.num_of_states;state++)
     {
-        fprintf(fp, "\n%i",state);
+        fprintf(fp, "\n%s",state_names[state]);
+        fprintf(fp, ",%i",state);
         for(uint transition = 0; transition < MAX_NUM_TRANSITIONS;transition++)
         {
-            fprintf(fp, ",%i",statemachine.transition_table[state][transition]);
+            uint state_to_transition = statemachine.transition_table[state][transition];
+            fprintf(fp, ",%i",state_to_transition);
+            if(state_to_transition != FINAL_STATE)
+            {
+                //Copy the name of the current state and make that the next state will be called currentstate name + transition
+                memcpy(state_names[state_to_transition],state_names[state],SIZEOF_WORDS);
+                uint las_char_id = strlen(state_names[state_to_transition]);
+                char transition_char = (transition == (MAX_NUM_TRANSITIONS -1)) ? '*' : 'a'+transition;
+                state_names[state_to_transition][las_char_id] = transition_char;
+            }
         }
     }
 
