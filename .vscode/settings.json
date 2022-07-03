@@ -3,6 +3,7 @@
     "files.associations": {
         "stdio.h": "c",
         "uri1824_defs.h": "c",
-        "statemachine.h": "c"
+        "statemachine.h": "c",
+        "string.h": "c"
     }
 }
