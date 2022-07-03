@@ -37,7 +37,18 @@ typedef struct
     uint ** transition_table;
 }statemachine_t;
 
+typedef struct node_t
+{
+    uint state_id;
+    uint transition_id;
+    uint num_words;
+    struct node_t * next_sibling;
+    struct node_t * first_child;
+}node_t;
+
 static double StateMachine__CalculateKeysPressed(dictionary_t * dictionary);
+static double StateMachine__CalculateKeysPressedByTree(dictionary_t * dictionary);
+void WalkTreeAndCountKeysPressed(node_t* current_node);
 
 static bool StateMachine__ToCSV(statemachine_t statemachine);
 static uint Num_CSV = 0;
@@ -45,12 +56,46 @@ static uint Num_CSV = 0;
 //===========================================================================================
 int main(int argc, char const *argv[])
 {    
+    if(RUN_TESTS == true)
+    {
+        #define NUM_INPUTS_TO_TEST  3
+
+        #define TEST1_SIZE  4
+        char * test1_words[TEST1_SIZE] ={"hello","hell","heaven","go"};
+        #define TEST2_SIZE  3
+        char * test2_words[TEST2_SIZE] ={"he","h","hi"};
+        #define TEST3_SIZE  7
+        char * test3_words[TEST3_SIZE] ={"structure","structures","ride","riders","stress","solstice","ridiculous"};
+        
+        dictionary_t basic_inputs_to_test[NUM_INPUTS_TO_TEST] =
+        {
+            {
+                .num_of_words = TEST1_SIZE,
+                .list_of_words = test1_words,
+            },
+            {
+                .num_of_words = TEST2_SIZE,
+                .list_of_words = test2_words,
+            },
+            {
+                .num_of_words = TEST3_SIZE,
+                .list_of_words = test3_words,
+            },
+        };
+
+        for(uint test_id = 0; test_id < NUM_INPUTS_TO_TEST; test_id++)
+        {
+            printf("%.2f\n",StateMachine__CalculateKeysPressedByTree(&basic_inputs_to_test[test_id]));
+        }
+
+        return 0;
+    }
 
     //GET USER INPUT ============================================================================
     #define MAX_DICTIONARIES 200
     uint num_of_dictionaries = 0;
     dictionary_t dictionary_list[MAX_DICTIONARIES];
-    dictionary_t * current_dictionary = &dictionary_list;
+    dictionary_t * current_dictionary;
 
     while(true)
     {            
@@ -80,15 +125,15 @@ int main(int argc, char const *argv[])
 
     //CALCULATE KEYS PRESSED =====================================================================
     for(uint dictId = 0; dictId < num_of_dictionaries;dictId++)
-        printf("%.2f\n",StateMachine__CalculateKeysPressed(&dictionary_list[dictId]));
+        printf("%.2f\n",StateMachine__CalculateKeysPressedByTree(&dictionary_list[dictId]));
 
     //PRINT USER INPUT ==========================================================================
-    for(uint dictId = 0; dictId < num_of_dictionaries;dictId++)
-    {
-        current_dictionary = &dictionary_list[dictId];
-        for(uint word_counter = 0; word_counter < current_dictionary->num_of_words;word_counter++)
-            printf("%s\n",current_dictionary->list_of_words[word_counter]);
-    }
+    // for(uint dictId = 0; dictId < num_of_dictionaries;dictId++)
+    // {
+    //     current_dictionary = &dictionary_list[dictId];
+    //     for(uint word_counter = 0; word_counter < current_dictionary->num_of_words;word_counter++)
+    //         printf("%s\n",current_dictionary->list_of_words[word_counter]);
+    // }
 
     return 0;
 }
@@ -97,6 +142,128 @@ int main(int argc, char const *argv[])
 //===========================================================================================
 //=================================SUPPORT FUNTIONS==========================================
 //===========================================================================================
+uint clicks_pressed;
+node_t RootNode = {.num_words = 0,.next_sibling = NULL,.first_child = NULL};
+
+static double StateMachine__CalculateKeysPressedByTree(dictionary_t * dictionary)
+{
+    #define SIZEOF_DICT_ARRAY        (dictionary->num_of_words*sizeof(uint))
+    clicks_pressed = dictionary->num_of_words;
+
+    int num_states = 0;
+    node_t RootNode = {.num_words = dictionary->num_of_words,.next_sibling = NULL,.first_child = NULL};
+
+    //Array to keep track of currentt state of each word
+    node_t ** words_state = (node_t **) calloc(dictionary->num_of_words,sizeof(node_t*));
+    for(uint word_id = 0; word_id < dictionary->num_of_words; word_id++ )
+        words_state[word_id] = &RootNode;
+
+    bool * word_complete = (bool *) calloc(dictionary->num_of_words,sizeof(bool));
+
+    //For each possible char id allowed by word
+    for(uint char_id = 0; char_id < MAX_NUM_CHARS; char_id++)
+    {
+        //For each word on the dictionary
+        for(uint word_id = 0; word_id < dictionary->num_of_words; word_id++ )
+        {
+            if(word_complete[word_id] == false)
+            {
+                char transition_id = dictionary->list_of_words[word_id][char_id];
+                bool transition_exists = false;
+                
+                node_t * current_node = words_state[word_id];
+                node_t * iteration_node = current_node->first_child;
+                if(iteration_node != NULL)
+                {
+                    do
+                    {
+                        if(iteration_node->transition_id == transition_id)
+                        {
+                            transition_exists = true;
+                            break;
+                        }
+                        iteration_node = iteration_node->next_sibling;
+                    }while(iteration_node != NULL);
+                }
+
+                node_t * next_node;
+                if(transition_exists)
+                {
+                    iteration_node->num_words++;
+                    next_node = iteration_node;
+                }
+                else
+                {
+                    num_states++;
+                    node_t * new_node = calloc(1,sizeof(node_t));
+                    new_node->transition_id = transition_id;
+                    new_node->num_words = 1;
+                    new_node->state_id = num_states;
+                    if(current_node->first_child == NULL)
+                    {
+                        current_node->first_child = new_node;
+                    }
+                    else
+                    {
+                        node_t * iteration_node = current_node->first_child;
+                        while(iteration_node->next_sibling != NULL) iteration_node = iteration_node->next_sibling;
+                        iteration_node->next_sibling = new_node;
+                    }
+                    next_node = new_node;
+                    // printf("\t%.*s [%i] new transition %c [%i]\n",char_id,dictionary->list_of_words[word_id],current_node->state_id,transition_id,next_node->state_id);
+                }
+
+                if(transition_id == '\0')
+                    current_node->num_words--;
+
+                words_state[word_id] = next_node;
+            }
+        }
+
+        uint completed_words = 0;
+        for(uint word_id = 0; word_id < dictionary->num_of_words; word_id++ )
+        {
+            if(word_complete[word_id] == false)
+            {
+                if(words_state[word_id]->num_words <= 1)
+                {
+                    word_complete[word_id] = true;
+                    completed_words++;
+                }
+            }
+            else
+                completed_words++;
+        }
+
+        if(completed_words == dictionary->num_of_words)
+            break;
+    }
+
+    WalkTreeAndCountKeysPressed(&RootNode);
+
+    return( ((double)(clicks_pressed)/dictionary->num_of_words) );
+}
+
+void WalkTreeAndCountKeysPressed(node_t* current_node) {
+    if(current_node != NULL) 
+    {
+        if(current_node->first_child != NULL)
+        {
+            WalkTreeAndCountKeysPressed(current_node->first_child);
+            if( current_node->first_child->next_sibling != NULL &&
+                current_node->state_id != 0)
+            {
+                // printf("\t+ %i keys pressed from state %i\n",current_node->num_words,current_node->state_id);
+                clicks_pressed += current_node->num_words;
+            }
+        }
+
+        if(current_node->next_sibling != NULL)
+        {
+            WalkTreeAndCountKeysPressed(current_node->next_sibling);
+        }
+    }
+}
 
 static double StateMachine__CalculateKeysPressed(dictionary_t * dictionary)
 {
@@ -130,6 +297,7 @@ static double StateMachine__CalculateKeysPressed(dictionary_t * dictionary)
     {
         //For each word on the dictionary
         uint completed_words = 0;
+        uint new_states = 0;
         for(uint word_id = 0; word_id < dictionary->num_of_words; word_id++ )
         {
             //If Word was not completed yet and is a valid state
