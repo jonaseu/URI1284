@@ -29,7 +29,6 @@ typedef struct dictionary_t
 {
     uint num_of_words;
     char ** list_of_words;
-    struct dictionary_t * next;
 }dictionary_t;
 
 typedef struct 
@@ -45,97 +44,51 @@ static uint Num_CSV = 0;
 
 //===========================================================================================
 int main(int argc, char const *argv[])
-{
-//TESTING ===================================================================================
-    if(RUN_TESTS == true)
-    {
-        #define NUM_INPUTS_TO_TEST  3
+{    
 
-        #define TEST1_SIZE  4
-        char * test1_words[TEST1_SIZE] ={"hello","hell","heaven","go"};
-        #define TEST2_SIZE  3
-        char * test2_words[TEST2_SIZE] ={"he","h","hi"};
-        #define TEST3_SIZE  7
-        char * test3_words[TEST3_SIZE] ={"structure","structures","ride","riders","stress","solstice","ridiculous"};
-        
-        dictionary_t basic_inputs_to_test[NUM_INPUTS_TO_TEST] =
-        {
-            {
-                .num_of_words = TEST1_SIZE,
-                .list_of_words = test1_words,
-            },
-            {
-                .num_of_words = TEST2_SIZE,
-                .list_of_words = test2_words,
-            },
-            {
-                .num_of_words = TEST3_SIZE,
-                .list_of_words = test3_words,
-            },
-        };
-
-        for(uint test_id = 0; test_id < NUM_INPUTS_TO_TEST; test_id++)
-        {
-            printf("%.2f\n",StateMachine__CalculateKeysPressed(&basic_inputs_to_test[test_id]));
-        }
-
-        return 0;
-    }
-    
-
-//GET USER INPUT ============================================================================
+    //GET USER INPUT ============================================================================
+    #define MAX_DICTIONARIES 200
     uint num_of_dictionaries = 0;
-    dictionary_t dictionary_list;
+    dictionary_t dictionary_list[MAX_DICTIONARIES];
     dictionary_t * current_dictionary = &dictionary_list;
 
     while(true)
     {            
         uint dictionary_size;
-        char buffer[100];
-        fgets(buffer, sizeof(buffer), stdin);
-        if(sscanf(buffer, "%lu", &dictionary_size) == 1)
+        if(scanf("%i", &dictionary_size) != EOF)
         {
+            current_dictionary = &dictionary_list[num_of_dictionaries];
             current_dictionary->num_of_words = dictionary_size;
             current_dictionary->list_of_words = (char **) malloc(sizeof(char *)*dictionary_size);
             for(uint word_counter = 0; word_counter < dictionary_size;word_counter++)
             {
                 char input_word[MAX_WORD_LENGTH];
-                scanf(" %s",input_word);
-                while ((getchar()) != '\n');
-                current_dictionary->list_of_words[word_counter] = (char *) malloc(SIZEOF_WORDS);
+                scanf("%s",input_word);
+                current_dictionary->list_of_words[word_counter] = (char *) calloc(MAX_WORD_LENGTH,sizeof(char));
                 strcpy(current_dictionary->list_of_words[word_counter],input_word);
             }
+            num_of_dictionaries++;
         }
         else
         {
             break;
         }
 
-        current_dictionary->next = (dictionary_t *) calloc(1,sizeof(dictionary_t));
-        current_dictionary = current_dictionary->next;
+        if(num_of_dictionaries > MAX_DICTIONARIES)
+            break;
     }
-    
-    current_dictionary = &dictionary_list;
 
-//PRINT USER INPUT ==========================================================================
-    // do
-    // {
-    //     for(uint word_counter = 0; word_counter < current_dictionary->num_of_words;word_counter++)
-    //     {
-    //         //TODO: Create state machine
-    //         //TODO: Process state machine
-    //         printf("%s\n",current_dictionary->list_of_words[word_counter]);
-    //     }
+    //CALCULATE KEYS PRESSED =====================================================================
+    for(uint dictId = 0; dictId < num_of_dictionaries;dictId++)
+        printf("%.2f\n",StateMachine__CalculateKeysPressed(&dictionary_list[dictId]));
 
-    //     current_dictionary = current_dictionary->next;
-    // } while (current_dictionary->next != NULL);
-    
-//CALCULATE KEYS PRESSED =====================================================================
-    do
+    //PRINT USER INPUT ==========================================================================
+    for(uint dictId = 0; dictId < num_of_dictionaries;dictId++)
     {
-        printf("%.2f\n",StateMachine__CalculateKeysPressed(current_dictionary));
-        current_dictionary = current_dictionary->next;
-    } while (current_dictionary->next != NULL);
+        current_dictionary = &dictionary_list[dictId];
+        for(uint word_counter = 0; word_counter < current_dictionary->num_of_words;word_counter++)
+            printf("%s\n",current_dictionary->list_of_words[word_counter]);
+    }
 
     return 0;
 }
@@ -149,6 +102,9 @@ static double StateMachine__CalculateKeysPressed(dictionary_t * dictionary)
 {
     #define SIZEOF_DICT_ARRAY  (dictionary->num_of_words*sizeof(uint))
     
+    if(dictionary->num_of_words > 10000)
+        return 0;
+        
     uint clicks_pressed = dictionary->num_of_words;
 
     //Initializing state machine with only initial state
@@ -260,14 +216,13 @@ static double StateMachine__CalculateKeysPressed(dictionary_t * dictionary)
         memcpy(words_previous_state,words_state,SIZEOF_DICT_ARRAY);
     }
 
-    StateMachine__ToCSV(state_machine);
+    // StateMachine__ToCSV(state_machine);
 
     for(int i = 0; i < state_machine.num_of_states; i++)
         free(state_machine.transition_table[i]);
     free(state_machine.transition_table);
     free(words_state);
     free(words_previous_state);
-    free(num_words_per_state);
     free(num_words_per_state);
 
 
